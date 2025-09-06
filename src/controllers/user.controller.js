@@ -1,8 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandlers.js";
 import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiResponse } from "../utils/ApiRespnose.js";
 import jwt from "jsonwebtoken";
-import { User } from "../models/user.model.js";
+import User  from "../models/user.model.js";
 
 /* --------- Generate both tokens & persist refresh --------- */
 const generateAccessAndRefreshToken = async (userId) => {
@@ -22,9 +22,12 @@ const generateAccessAndRefreshToken = async (userId) => {
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, phone, totalMarks, gpa } = req.body;
 
-  if (!name || !email || !password || !totalMarks || !gpa)
+  if (!name || !email || !password || !totalMarks || !gpa){
+    
     throw new ApiError(400, "All required fields must be provided");
 
+  }
+  
   const exists = await User.findOne({ email });
   if (exists) throw new ApiError(409, "Email already registered");
 

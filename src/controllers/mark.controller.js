@@ -1,8 +1,8 @@
-import Mark from "../models/Mark.js";
-import Student from "../models/Student.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import Mark from "../models/mark.model.js";
+import User from "../models/user.model.js";
+import { asyncHandler } from "../utils/asyncHandlers.js";
 import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiResponse } from "../utils/ApiRespnose.js";
 
 // ADD MARK
 export const addMark = asyncHandler(async (req, res) => {
@@ -10,7 +10,7 @@ export const addMark = asyncHandler(async (req, res) => {
   if (!studentId || !subject || !grade || gradePoint == null)
     throw new ApiError(400, "All fields are required");
 
-  const student = await Student.findById(studentId);
+  const student = await User.findById(studentId);
   if (!student) throw new ApiError(404, "Student not found");
 
   const mark = await Mark.create({ student: studentId, subject, grade, gradePoint });
@@ -34,6 +34,6 @@ export const deleteMark = asyncHandler(async (req, res) => {
   if (!mark) throw new ApiError(404, "Mark not found");
 
   // also pull it from student.marks
-  await Student.findByIdAndUpdate(mark.student, { $pull: { marks: mark._id } });
+  await User.findByIdAndUpdate(mark.student, { $pull: { marks: mark._id } });
   return res.status(200).json(new ApiResponse(200, null, "Mark deleted"));
 });

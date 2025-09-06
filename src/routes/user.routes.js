@@ -6,7 +6,7 @@ import {
   getProfile,
   logoutUser,
 } from "../controllers/user.controller.js";
-import { verifyJwt } from "../middlewares/auth.js";
+import { verifyJwt } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 

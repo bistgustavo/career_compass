@@ -1,7 +1,7 @@
-import College from "../models/College.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import College from "../models/college.model.js";
+import { asyncHandler } from "../utils/asyncHandlers.js";
 import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiResponse } from "../utils/ApiRespnose.js";
 
 // CREATE
 export const createCollege = asyncHandler(async (req, res) => {
