@@ -24,14 +24,17 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, phone, password, totalMarks, gpa } = req.body;
+  const { name, email, phone, password, totalMarks, gpa, role } = req.body;
 
   if ([name, email, password].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "Name, email and password are required");
   }
 
-  if (!totalMarks || !gpa) {
-    throw new ApiError(400, "Total marks and GPA are required");
+  const userRole = role || 'student';
+  
+  // For students, totalMarks and GPA are required
+  if (userRole === 'student' && (totalMarks === undefined || totalMarks === null || gpa === undefined || gpa === null)) {
+    throw new ApiError(400, "Total marks and GPA are required for students");
   }
 
   const existedUser = await User.findOne({ email });
@@ -40,15 +43,25 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User with email already exists");
   }
 
-  const user = await User.create({
+  const userData = {
     name,
     email,
     phone,
     password,
-    totalMarks,
-    gpa,
-  });
+    role: userRole,
+  };
+  
+  // Add totalMarks and gpa only for students
+  if (userRole === 'student') {
+    userData.totalMarks = totalMarks;
+    userData.gpa = gpa;
+  }
+  
+  const user = await User.create(userData);
 
+  // Generate tokens for automatic login
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+  
   const createdUser = await User.findById(user._id).select(
     "-password -refreshtoken"
   );
@@ -57,9 +70,20 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while registering the user");
   }
 
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered successfully"));
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(new ApiResponse(200, {
+      user: createdUser,
+      accessToken,
+      refreshToken,
+    }, "User registered successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -242,6 +266,102 @@ const getUserMarks = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user.marks, "User marks fetched successfully"));
 });
 
+// Admin-specific functions
+const getAllUsers = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, role } = req.query;
+  
+  const query = role ? { role } : {};
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  
+  const users = await User.find(query)
+    .select('-password -refreshtoken')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit));
+    
+  const total = await User.countDocuments(query);
+  
+  const result = {
+    docs: users,
+    totalDocs: total,
+    limit: parseInt(limit),
+    page: parseInt(page),
+    totalPages: Math.ceil(total / parseInt(limit)),
+    hasNextPage: parseInt(page) < Math.ceil(total / parseInt(limit)),
+    hasPrevPage: parseInt(page) > 1,
+  };
+  
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Users fetched successfully"));
+});
+
+const deleteUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  
+  if (userId === req.user._id.toString()) {
+    throw new ApiError(400, "You cannot delete your own account");
+  }
+  
+  const user = await User.findById(userId);
+  
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+  
+  // Also delete related marks
+  await Mark.deleteMany({ student: userId });
+  
+  await User.findByIdAndDelete(userId);
+  
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "User deleted successfully"));
+});
+
+const updateUserRole = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.body;
+  
+  if (!role || !['student', 'admin'].includes(role)) {
+    throw new ApiError(400, "Valid role is required");
+  }
+  
+  if (userId === req.user._id.toString()) {
+    throw new ApiError(400, "You cannot change your own role");
+  }
+  
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { role },
+    { new: true }
+  ).select('-password -refreshtoken');
+  
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+  
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User role updated successfully"));
+});
+
+const getUserStats = asyncHandler(async (req, res) => {
+  const totalUsers = await User.countDocuments();
+  const totalStudents = await User.countDocuments({ role: 'student' });
+  const totalAdmins = await User.countDocuments({ role: 'admin' });
+  
+  const stats = {
+    totalUsers,
+    totalStudents,
+    totalAdmins,
+  };
+  
+  return res
+    .status(200)
+    .json(new ApiResponse(200, stats, "User statistics fetched successfully"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -251,4 +371,9 @@ export {
   updateUserProfile,
   addUserMarks,
   getUserMarks,
+  // Admin functions
+  getAllUsers,
+  deleteUser,
+  updateUserRole,
+  getUserStats,
 };

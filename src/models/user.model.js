@@ -10,8 +10,18 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ["student", "admin"], default: "student" },
   password: { type: String, required: true },
 
-  totalMarks: { type: Number, required: true }, // Total SEE marks
-  gpa: { type: Number, required: true }, // Overall GPA
+  totalMarks: { 
+    type: Number, 
+    required: function() {
+      return this.role === 'student';
+    }
+  }, // Total SEE marks
+  gpa: { 
+    type: Number, 
+    required: function() {
+      return this.role === 'student';
+    }
+  }, // Overall GPA
 
   marks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Mark" }], // linked marks
 

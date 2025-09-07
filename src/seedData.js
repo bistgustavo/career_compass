@@ -298,16 +298,18 @@ const seedColleges = async (courses) => {
   }
 };
 
-const seedSampleStudent = async (courses) => {
+const seedSampleUsers = async (courses) => {
   try {
     // Create a sample student
     await User.deleteMany({ email: "student@example.com" });
+    // Create a sample admin
+    await User.deleteMany({ email: "admin@example.com" });
     
     const student = await User.create({
       name: "John Doe",
       email: "student@example.com",
       phone: "+977-9841000000",
-      password: "password123",
+      password: "npm",
       totalMarks: 380,
       gpa: 3.2,
       role: "student",
@@ -358,8 +360,21 @@ const seedSampleStudent = async (courses) => {
     console.log("Email: student@example.com");
     console.log("Password: password123");
     
+    // Create a sample admin user
+    const admin = await User.create({
+      name: "Admin User",
+      email: "admin@example.com",
+      phone: "+977-9841111111",
+      password: "admin123",
+      role: "admin",
+    });
+    
+    console.log("Sample admin created");
+    console.log("Admin Email: admin@example.com");
+    console.log("Admin Password: admin123");
+    
   } catch (error) {
-    console.error("Error seeding sample student:", error);
+    console.error("Error seeding sample users:", error);
   }
 };
 
@@ -376,16 +391,19 @@ const seedData = async () => {
     }
     
     await seedColleges(courses);
-    await seedSampleStudent(courses);
+    await seedSampleUsers(courses);
     
     console.log("✅ All sample data seeded successfully!");
     console.log("\n🎓 You can now test the college search functionality!");
     console.log("\n📚 Available endpoints:");
-    console.log("- POST /api/users/login (Email: student@example.com, Password: password123)");
+    console.log("- POST /api/users/login");
+    console.log("  Student: student@example.com / password123");
+    console.log("  Admin: admin@example.com / admin123");
     console.log("- GET /api/colleges/search/by-marks (requires authentication)");
     console.log("- GET /api/colleges/recommendations (requires authentication)");
     console.log("- GET /api/colleges (public - view all colleges)");
     console.log("- GET /api/marks/my-marks (requires authentication)");
+    console.log("- GET /api/admin/* (requires admin authentication)");
     
     process.exit(0);
   } catch (error) {
